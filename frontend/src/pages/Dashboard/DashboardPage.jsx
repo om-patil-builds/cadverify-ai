@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, FileCheck2, Layers3 } from 'lucide-react';
 import Card from '../../components/ui/Card';
-import { checkBackendHealth } from '../../services/backendService';
-
-const recentActivity = [
-  'Frontend shell initialized for CADVerify AI.',
-  'Routing and layout structure are ready for future workflows.',
-  'Dashboard UI prepared for engineering review experiences.',
-];
+import { checkBackendHealth, fetchUploads } from '../../services/backendService';
 
 const DashboardPage = () => {
   const [backendStatus, setBackendStatus] = useState('loading');
   const [backendMessage, setBackendMessage] = useState('Checking backend connection...');
+  const [uploads, setUploads] = useState([]);
+  const [uploadCount, setUploadCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +27,23 @@ const DashboardPage = () => {
       }
     };
 
+    const loadUploads = async () => {
+      try {
+        const response = await fetchUploads();
+        if (isMounted) {
+          setUploads(response?.uploads || []);
+          setUploadCount(response?.total || 0);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setUploads([]);
+          setUploadCount(0);
+        }
+      }
+    };
+
     loadBackendStatus();
+    loadUploads();
 
     return () => {
       isMounted = false;
@@ -46,10 +58,10 @@ const DashboardPage = () => {
         description: backendMessage,
         icon: Activity,
       },
-      { title: 'Uploaded Drawings', value: '0', description: 'No drawings uploaded yet', icon: Layers3 },
+      { title: 'Uploaded Drawings', value: uploadCount.toString(), description: uploadCount === 0 ? 'No drawings uploaded yet' : 'Database-backed upload count', icon: Layers3 },
       { title: 'Comparison Reports', value: '0', description: 'Reports queue is currently empty', icon: FileCheck2 },
     ],
-    [backendMessage, backendStatus]
+    [backendMessage, backendStatus, uploadCount]
   );
 
   return (
@@ -80,15 +92,22 @@ const DashboardPage = () => {
       <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <span className="text-sm text-slate-500">Live placeholder</span>
+            <h3 className="text-lg font-semibold text-white">Recent Uploads</h3>
+            <span className="text-sm text-slate-500">Latest 5 records</span>
           </div>
           <ul className="space-y-3">
-            {recentActivity.map((item) => (
-              <li key={item} className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
-                {item}
+            {uploads.length === 0 ? (
+              <li className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+                No uploads recorded yet.
               </li>
-            ))}
+            ) : (
+              uploads.slice(0, 5).map((item) => (
+                <li key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+                  <div className="font-medium text-white">{item.pdf_filename}</div>
+                  <div className="mt-1 text-xs text-slate-500">{item.created_at}</div>
+                </li>
+              ))
+            )}
           </ul>
         </div>
 
