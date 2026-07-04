@@ -59,6 +59,16 @@ export const fetchParsedPdf = async (uploadId) => {
   return response.data;
 };
 
+export const fetchComparisonResult = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/comparison`);
+  return response.data;
+};
+
+export const compareUpload = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/compare`);
+  return response.data;
+};
+
 export const uploadDrawingFiles = async ({ pdfFile, dxfFile, onUploadProgress }) => {
   const formData = new FormData();
   formData.append('pdf_file', pdfFile);

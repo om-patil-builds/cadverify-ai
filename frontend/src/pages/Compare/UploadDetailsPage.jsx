@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, Circle, Download, File, FileText, Trash2 } from 'lucide-react';
 import {
+  compareUpload,
   deleteUpload,
   downloadUploadDxf,
   downloadUploadPdf,
+  fetchComparisonResult,
   fetchUploadById,
   fetchParsedDxfEntities,
   fetchParsedPdf,
@@ -26,6 +28,9 @@ const UploadDetailsPage = () => {
   const [pdfParseLoading, setPdfParseLoading] = useState(false);
   const [pdfParseError, setPdfParseError] = useState('');
   const [pdfParseResult, setPdfParseResult] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState('');
+  const [compareResult, setCompareResult] = useState(null);
 
   useEffect(() => {
     const loadUpload = async () => {
@@ -61,9 +66,21 @@ const UploadDetailsPage = () => {
       }
     };
 
+    const loadComparisonResult = async () => {
+      try {
+        const result = await fetchComparisonResult(uploadId);
+        setCompareResult(result);
+      } catch (err) {
+        if (err?.response?.status !== 404) {
+          setCompareError('Unable to load previous comparison results.');
+        }
+      }
+    };
+
     loadUpload();
     loadParsedEntities();
     loadParsedPdf();
+    loadComparisonResult();
   }, [uploadId]);
 
   const handleDelete = async () => {
@@ -132,6 +149,23 @@ const UploadDetailsPage = () => {
       setPdfParseError(err?.response?.data?.detail || 'PDF parsing failed. Please try again.');
     } finally {
       setPdfParseLoading(false);
+    }
+  };
+
+  const handleStartComparison = async () => {
+    if (!upload) return;
+
+    setCompareLoading(true);
+    setCompareError('');
+    setCompareResult(null);
+
+    try {
+      const result = await compareUpload(upload.id);
+      setCompareResult(result);
+    } catch (err) {
+      setCompareError(err?.response?.data?.detail || 'Comparison failed. Make sure both DXF and PDF are parsed first.');
+    } finally {
+      setCompareLoading(false);
     }
   };
 
@@ -242,10 +276,16 @@ const UploadDetailsPage = () => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Circle className="mt-1 h-5 w-5 text-slate-500" />
+                  <Circle className={`mt-1 h-5 w-5 ${compareResult ? 'text-emerald-400' : compareLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
                   <div>
                     <p className="font-semibold text-white">Drawing Comparison</p>
-                    <p className="text-slate-500">Available in next milestone.</p>
+                    <p className="text-slate-500">
+                      {compareLoading
+                        ? 'Comparison in progress'
+                        : compareResult
+                        ? `Completed — ${compareResult.accuracy}% accuracy`
+                        : 'Ready to compare'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -281,10 +321,11 @@ const UploadDetailsPage = () => {
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="rounded-3xl bg-slate-900/80 px-5 py-3 text-sm font-semibold text-slate-200 opacity-80"
+                  onClick={handleStartComparison}
+                  disabled={compareLoading || (!parseResult && !pdfParseResult)}
+                  className="rounded-3xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Start Comparison (Available in Next Milestone)
+                  {compareLoading ? 'Comparing…' : 'Start Comparison'}
                 </button>
               </div>
             </div>
@@ -367,6 +408,53 @@ const UploadDetailsPage = () => {
                           ? 'Yes'
                           : 'No'}
                       </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
+              <h3 className="text-lg font-semibold text-white">Comparison Results</h3>
+              <div className="mt-6 space-y-4 text-sm text-slate-400">
+                <div>
+                  <span className="block text-slate-500">Status</span>
+                  <p className="text-white">
+                    {compareLoading
+                      ? 'Comparison in progress...'
+                      : compareResult
+                      ? 'Comparison completed'
+                      : 'Not yet compared'}
+                  </p>
+                </div>
+                {compareError ? (
+                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {compareError}
+                  </div>
+                ) : null}
+                {compareResult ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                    <div className="rounded-2xl bg-slate-950/80 p-4 text-center">
+                      <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Accuracy</p>
+                      <p className="mt-1 text-3xl font-bold text-emerald-400">{compareResult.accuracy}%</p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-950/80 p-3">
+                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Matched</p>
+                        <p className="mt-1 text-lg font-semibold text-emerald-400">{compareResult.matched_count}</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-950/80 p-3">
+                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Missing</p>
+                        <p className="mt-1 text-lg font-semibold text-rose-400">{compareResult.missing_count}</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-950/80 p-3">
+                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Extra</p>
+                        <p className="mt-1 text-lg font-semibold text-amber-400">{compareResult.extra_count}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500">Status</span>
+                      <p className="font-semibold text-emerald-300">{compareResult.status}</p>
                     </div>
                   </div>
                 ) : null}
