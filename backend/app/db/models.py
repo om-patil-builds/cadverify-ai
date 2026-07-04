@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy.orm import relationship
 
 from app.db.database import Base
 
@@ -14,3 +15,22 @@ class Upload(Base):
     pdf_path = Column(String(500), nullable=False)
     dxf_path = Column(String(500), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    entities = relationship(
+        "DXFEntity",
+        back_populates="upload",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class DXFEntity(Base):
+    __tablename__ = "dxf_entities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    upload_id = Column(Integer, ForeignKey("uploads.id", ondelete="CASCADE"), nullable=False)
+    entity_type = Column(String(50), nullable=False)
+    layer = Column(String(100), nullable=True)
+    data = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    upload = relationship("Upload", back_populates="entities")

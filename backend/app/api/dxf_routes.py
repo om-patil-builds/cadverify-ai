@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Upload
+from app.db.models import DXFEntity, Upload
 from app.services.dxf_parser import DXFParseError, parse_dxf
 
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ def parse_upload_dxf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str,
 
     try:
         logger.info("Parsing started", extra={"upload_id": upload_id, "file_path": str(dxf_path)})
-        parsed_result = parse_dxf(str(dxf_path))
+        parsed_result = parse_dxf(str(dxf_path), db=db, upload_id=upload_id)
         entity_count = sum(parsed_result.get("summary", {}).values())
         logger.info("Parsing completed", extra={"upload_id": upload_id, "entity_count": entity_count})
         return {
@@ -121,3 +121,37 @@ def parse_upload_dxf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str,
     except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
         logger.exception("Unexpected DXF parsing failure", extra={"upload_id": upload_id, "file_path": str(dxf_path)})
         raise HTTPException(status_code=500, detail="Failed to parse DXF file") from exc
+
+
+@router.get("/{upload_id}/parsed-entities")
+def get_parsed_entities(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    upload = db.query(Upload).filter(Upload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail=f"Upload with id {upload_id} was not found")
+
+    entities = (
+        db.query(DXFEntity)
+        .filter(DXFEntity.upload_id == upload_id)
+        .order_by(DXFEntity.id)
+        .all()
+    )
+
+    summary: Dict[str, int] = {}
+    for entity in entities:
+        key = f"{entity.entity_type.lower()}s"
+        summary[key] = summary.get(key, 0) + 1
+
+    return {
+        "upload_id": upload_id,
+        "entity_count": len(entities),
+        "summary": summary,
+        "entities": [
+            {
+                "id": entity.id,
+                "type": entity.entity_type,
+                "layer": entity.layer,
+                "data": entity.data,
+            }
+            for entity in entities
+        ],
+    }
