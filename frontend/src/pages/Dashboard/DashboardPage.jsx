@@ -9,8 +9,8 @@ import { formatDateTime } from '../../utils/formatDate';
 const DashboardPage = () => {
   const [backendStatus, setBackendStatus] = useState('loading');
   const [backendMessage, setBackendMessage] = useState('Checking backend connection...');
+  const [uploads, setUploads] = useState([]);
   const [uploadCount, setUploadCount] = useState(0);
-  const [recentUploads, setRecentUploads] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -34,13 +34,14 @@ const DashboardPage = () => {
       try {
         const response = await fetchUploads();
         if (isMounted) {
-          setUploadCount(response?.count ?? 0);
-          setRecentUploads(response?.uploads ?? []);
+          const total = response?.total ?? response?.count ?? 0;
+          setUploadCount(total);
+          setUploads(response?.uploads ?? []);
         }
       } catch (error) {
         if (isMounted) {
+          setUploads([]);
           setUploadCount(0);
-          setRecentUploads([]);
         }
       }
     };
@@ -57,14 +58,19 @@ const DashboardPage = () => {
     () => [
       {
         title: 'Backend Status',
-        value: backendStatus === 'connected' ? '🟢 Backend Connected' : backendStatus === 'offline' ? '🔴 Backend Offline' : '⏳ Checking...',
+        value:
+          backendStatus === 'connected'
+            ? '🟢 Backend Connected'
+            : backendStatus === 'offline'
+            ? '🔴 Backend Offline'
+            : '⏳ Checking...',
         description: backendMessage,
         icon: Activity,
       },
       {
         title: 'Uploaded Drawings',
         value: uploadCount.toString(),
-        description: uploadCount === 0 ? 'No drawings uploaded yet' : 'Latest uploaded drawings count',
+        description: uploadCount === 0 ? 'No drawings uploaded yet' : 'Database-backed upload count',
         icon: Layers3,
       },
       { title: 'Comparison Reports', value: '0', description: 'Reports queue is currently empty', icon: FileCheck2 },
@@ -99,18 +105,35 @@ const DashboardPage = () => {
         ))}
       </section>
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">Recent Uploads</h3>
-          <span className="text-sm text-slate-500">Latest 5 uploads</span>
+      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">Recent Uploads</h3>
+            <span className="text-sm text-slate-500">Latest 5 records</span>
+          </div>
+          <ul className="space-y-3">
+            {uploads.length === 0 ? (
+              <li className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+                No uploads recorded yet.
+              </li>
+            ) : (
+              uploads.slice(0, 5).map((item) => (
+                <li key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+                  <div className="font-medium text-white">{item.pdf_filename}</div>
+                  <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.created_at)}</div>
+                </li>
+              ))
+            )}
+          </ul>
         </div>
+
         <div className="space-y-3">
-          {recentUploads.length === 0 ? (
+          {uploads.length === 0 ? (
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400">
               No drawings uploaded yet.
             </div>
           ) : (
-            recentUploads.slice(0, 5).map((upload) => (
+            uploads.slice(0, 5).map((upload) => (
               <UploadCard
                 key={upload.id}
                 upload={{ ...upload, created_at: formatDateTime(upload.created_at) }}

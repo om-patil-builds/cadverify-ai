@@ -27,7 +27,7 @@ def get_db() -> Generator:
 def initialize_database() -> None:
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("Database initialized successfully")
-    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.info("Database initialized and PostgreSQL connected successfully")
+    except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
         logger.exception("Database initialization failed: %s", exc)
         raise

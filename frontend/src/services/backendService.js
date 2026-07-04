@@ -9,7 +9,6 @@ export const fetchUploads = async () => {
   const response = await apiClient.get('/uploads');
   return response.data;
 };
-
 export const fetchUploadById = async (uploadId) => {
   const response = await apiClient.get(`/uploads/${uploadId}`);
   return response.data;
@@ -39,7 +38,6 @@ export const downloadUploadPdf = async (uploadId, fileName) => {
 export const downloadUploadDxf = async (uploadId, fileName) => {
   return downloadBlob(`/uploads/${uploadId}/download/dxf`, fileName);
 };
-
 export const uploadDrawingFiles = async ({ pdfFile, dxfFile, onUploadProgress }) => {
   const formData = new FormData();
   formData.append('pdf_file', pdfFile);

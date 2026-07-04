@@ -97,8 +97,13 @@ async def upload_files(
 
         return {
             "status": "success",
-            "message": "Upload completed successfully",
+            "message": "Files uploaded successfully",
             "upload_id": upload_record.id,
+            "data": {
+                "pdf_filename": upload_record.pdf_filename,
+                "dxf_filename": upload_record.dxf_filename,
+                "created_at": upload_record.created_at.isoformat(),
+            },
         }
     except HTTPException:
         raise
@@ -107,14 +112,33 @@ async def upload_files(
             db.rollback()
         except Exception:
             pass
-        logger.exception("Upload processing failed")
+        logger.exception("Upload processing failed: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to upload files.") from exc
+
+
+@app.get("/uploads")
+def list_uploads(db: Session = Depends(get_db)) -> dict[str, object]:
+    uploads = db.query(Upload).order_by(Upload.created_at.desc()).all()
+    return {
+        "total": len(uploads),
+        "uploads": [
+            {
+                "id": upload.id,
+                "pdf_filename": upload.pdf_filename,
+                "dxf_filename": upload.dxf_filename,
+                "pdf_path": upload.pdf_path,
+                "dxf_path": upload.dxf_path,
+                "created_at": upload.created_at.isoformat(),
+            }
+            for upload in uploads
+        ],
+    }
 
 
 @app.on_event("startup")
 def startup_event() -> None:
     try:
         initialize_database()
-    except Exception as exc:  # pragma: no cover - defensive fallback
+    except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
         logger.exception("Database startup failed: %s", exc)
     logger.info("CADVerify AI backend startup complete")
