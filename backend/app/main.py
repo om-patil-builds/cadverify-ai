@@ -4,11 +4,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Final
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
+from app.api.dxf_routes import router as dxf_router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
+from app.db.database import get_db, initialize_database
+from app.db.models import Upload
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -26,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(dxf_router)
 
 BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
 UPLOAD_DIR: Final[Path] = BASE_DIR / "uploads"
@@ -50,6 +56,7 @@ def health_check() -> dict[str, str]:
 async def upload_files(
     pdf_file: UploadFile = File(..., description="PDF engineering drawing"),
     dxf_file: UploadFile = File(..., description="DXF CAD drawing"),
+    db: Session = Depends(get_db),
 ) -> dict[str, object]:
     try:
         PDF_DIR.mkdir(parents=True, exist_ok=True)
@@ -78,19 +85,36 @@ async def upload_files(
         with dxf_target_path.open("wb") as dxf_buffer:
             dxf_buffer.write(await dxf_file.read())
 
+        upload_record = Upload(
+            pdf_filename=pdf_target_name,
+            dxf_filename=dxf_target_name,
+            pdf_path=str(pdf_target_path),
+            dxf_path=str(dxf_target_path),
+        )
+        db.add(upload_record)
+        db.commit()
+        db.refresh(upload_record)
+
         return {
-            "status": "uploaded",
-            "original_filenames": [pdf_file.filename, dxf_file.filename],
-            "stored_filenames": [pdf_target_name, dxf_target_name],
-            "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success",
+            "message": "Upload completed successfully",
+            "upload_id": upload_record.id,
         }
     except HTTPException:
         raise
     except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
+        try:
+            db.rollback()
+        except Exception:
+            pass
         logger.exception("Upload processing failed")
         raise HTTPException(status_code=500, detail="Failed to upload files.") from exc
 
 
 @app.on_event("startup")
 def startup_event() -> None:
+    try:
+        initialize_database()
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.exception("Database startup failed: %s", exc)
     logger.info("CADVerify AI backend startup complete")

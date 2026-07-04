@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity, FileCheck2, Layers3 } from 'lucide-react';
 import Card from '../../components/ui/Card';
-import { checkBackendHealth } from '../../services/backendService';
-
-const recentActivity = [
-  'Frontend shell initialized for CADVerify AI.',
-  'Routing and layout structure are ready for future workflows.',
-  'Dashboard UI prepared for engineering review experiences.',
-];
+import UploadCard from '../../components/ui/UploadCard';
+import { checkBackendHealth, fetchUploads } from '../../services/backendService';
+import { formatDateTime } from '../../utils/formatDate';
 
 const DashboardPage = () => {
   const [backendStatus, setBackendStatus] = useState('loading');
   const [backendMessage, setBackendMessage] = useState('Checking backend connection...');
+  const [uploadCount, setUploadCount] = useState(0);
+  const [recentUploads, setRecentUploads] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +30,23 @@ const DashboardPage = () => {
       }
     };
 
+    const loadUploads = async () => {
+      try {
+        const response = await fetchUploads();
+        if (isMounted) {
+          setUploadCount(response?.count ?? 0);
+          setRecentUploads(response?.uploads ?? []);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setUploadCount(0);
+          setRecentUploads([]);
+        }
+      }
+    };
+
     loadBackendStatus();
+    loadUploads();
 
     return () => {
       isMounted = false;
@@ -46,11 +61,18 @@ const DashboardPage = () => {
         description: backendMessage,
         icon: Activity,
       },
-      { title: 'Uploaded Drawings', value: '0', description: 'No drawings uploaded yet', icon: Layers3 },
+      {
+        title: 'Uploaded Drawings',
+        value: uploadCount.toString(),
+        description: uploadCount === 0 ? 'No drawings uploaded yet' : 'Latest uploaded drawings count',
+        icon: Layers3,
+      },
       { title: 'Comparison Reports', value: '0', description: 'Reports queue is currently empty', icon: FileCheck2 },
     ],
-    [backendMessage, backendStatus]
+    [backendMessage, backendStatus, uploadCount]
   );
+
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-8">
@@ -77,28 +99,25 @@ const DashboardPage = () => {
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <span className="text-sm text-slate-500">Live placeholder</span>
-          </div>
-          <ul className="space-y-3">
-            {recentActivity.map((item) => (
-              <li key={item} className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
-                {item}
-              </li>
-            ))}
-          </ul>
+      <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Recent Uploads</h3>
+          <span className="text-sm text-slate-500">Latest 5 uploads</span>
         </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30">
-          <h3 className="text-lg font-semibold text-white">Next Steps</h3>
-          <ul className="mt-4 space-y-3 text-sm text-slate-400">
-            <li>• Connect frontend routes to backend services</li>
-            <li>• Add upload and review workflows</li>
-            <li>• Prepare report generation experiences</li>
-          </ul>
+        <div className="space-y-3">
+          {recentUploads.length === 0 ? (
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400">
+              No drawings uploaded yet.
+            </div>
+          ) : (
+            recentUploads.slice(0, 5).map((upload) => (
+              <UploadCard
+                key={upload.id}
+                upload={{ ...upload, created_at: formatDateTime(upload.created_at) }}
+                onClick={() => navigate(`/compare/${upload.id}`)}
+              />
+            ))
+          )}
         </div>
       </section>
 
