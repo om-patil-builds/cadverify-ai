@@ -6,6 +6,8 @@ import {
   downloadUploadDxf,
   downloadUploadPdf,
   fetchUploadById,
+  fetchParsedDxfEntities,
+  parseUploadDxf,
 } from '../../services/backendService';
 import { formatDateTime } from '../../utils/formatDate';
 
@@ -16,6 +18,9 @@ const UploadDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [parseLoading, setParseLoading] = useState(false);
+  const [parseError, setParseError] = useState('');
+  const [parseResult, setParseResult] = useState(null);
 
   useEffect(() => {
     const loadUpload = async () => {
@@ -29,7 +34,19 @@ const UploadDetailsPage = () => {
       }
     };
 
+    const loadParsedEntities = async () => {
+      try {
+        const parsed = await fetchParsedDxfEntities(uploadId);
+        setParseResult({ summary: parsed.summary, entities: parsed.entities.map((entity) => entity.data) });
+      } catch (err) {
+        if (err?.response?.status !== 404) {
+          setParseError('Unable to load previous parse results.');
+        }
+      }
+    };
+
     loadUpload();
+    loadParsedEntities();
   }, [uploadId]);
 
   const handleDelete = async () => {
@@ -64,6 +81,23 @@ const UploadDetailsPage = () => {
       await downloadUploadDxf(upload.id, upload.dxf_filename);
     } catch (err) {
       setError('Unable to download DXF file.');
+    }
+  };
+
+  const handleParseDxf = async () => {
+    if (!upload) return;
+
+    setParseLoading(true);
+    setParseError('');
+    setParseResult(null);
+
+    try {
+      const response = await parseUploadDxf(upload.id);
+      setParseResult(response.parsed);
+    } catch (err) {
+      setParseError(err?.response?.data?.detail || 'DXF parsing failed. Please try again.');
+    } finally {
+      setParseLoading(false);
     }
   };
 
@@ -148,10 +182,16 @@ const UploadDetailsPage = () => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Circle className="mt-1 h-5 w-5 text-slate-500" />
+                  <Circle className="mt-1 h-5 w-5 text-cyan-400" />
                   <div>
                     <p className="font-semibold text-white">DXF Parsing</p>
-                    <p className="text-slate-500">Available in next milestone.</p>
+                    <p className="text-slate-500">
+                      {parseLoading
+                        ? 'Parsing in progress'
+                        : parseResult
+                        ? 'Parsed successfully'
+                        : 'Ready to parse'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -178,10 +218,11 @@ const UploadDetailsPage = () => {
               <div className="mt-6 flex flex-col gap-3">
                 <button
                   type="button"
-                  disabled
-                  className="rounded-3xl bg-cyan-500/20 px-5 py-3 text-sm font-semibold text-cyan-200 opacity-80"
+                  onClick={handleParseDxf}
+                  disabled={parseLoading}
+                  className="rounded-3xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-white hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Parse DXF (Available in Next Milestone)
+                  {parseLoading ? 'Parsing DXF…' : 'Parse DXF'}
                 </button>
                 <button
                   type="button"
@@ -190,6 +231,45 @@ const UploadDetailsPage = () => {
                 >
                   Start Comparison (Available in Next Milestone)
                 </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
+              <h3 className="text-lg font-semibold text-white">DXF Parsing Status</h3>
+              <div className="mt-6 space-y-4 text-sm text-slate-400">
+                <div>
+                  <span className="block text-slate-500">Status</span>
+                  <p className="text-white">
+                    {parseLoading
+                      ? 'Parsing in progress...'
+                      : parseResult
+                      ? 'Parsed successfully'
+                      : 'Not yet parsed'}
+                  </p>
+                </div>
+                {parseError ? (
+                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {parseError}
+                  </div>
+                ) : null}
+                {parseResult ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                    <div>
+                      <span className="block text-slate-500">Total Entities</span>
+                      <p className="text-white">
+                        {Object.values(parseResult.summary).reduce((sum, count) => sum + count, 0)}
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {Object.entries(parseResult.summary).map(([entityType, count]) => (
+                        <div key={entityType} className="rounded-2xl bg-slate-950/80 p-3">
+                          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">{entityType}</p>
+                          <p className="mt-1 text-lg font-semibold text-white">{count}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
