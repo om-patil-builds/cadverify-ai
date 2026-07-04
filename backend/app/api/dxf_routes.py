@@ -7,8 +7,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import DXFEntity, Upload
+from app.db.models import DXFEntity, PDFParse, Upload
 from app.services.dxf_parser import DXFParseError, parse_dxf
+from app.services.pdf_parser import PDFParseError, parse_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,60 @@ def parse_upload_dxf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str,
     except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
         logger.exception("Unexpected DXF parsing failure", extra={"upload_id": upload_id, "file_path": str(dxf_path)})
         raise HTTPException(status_code=500, detail="Failed to parse DXF file") from exc
+
+
+@router.get("/{upload_id}/parse-pdf")
+def parse_upload_pdf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Parse the PDF file associated with an uploaded drawing record."""
+    upload = db.query(Upload).filter(Upload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail=f"Upload with id {upload_id} was not found")
+
+    pdf_path = Path(upload.pdf_path)
+    if not pdf_path.exists() or not pdf_path.is_file():
+        raise HTTPException(status_code=404, detail="PDF file is missing for this upload")
+
+    try:
+        logger.info("PDF parsing started", extra={"upload_id": upload_id, "file_path": str(pdf_path)})
+        parsed_result = parse_pdf(str(pdf_path), db=db, upload_id=upload_id)
+        logger.info("PDF parsing completed", extra={"upload_id": upload_id, "page_count": parsed_result.get("page_count", 0)})
+        return {
+            "upload_id": upload_id,
+            "pdf_path": str(pdf_path),
+            "parsed": parsed_result,
+        }
+    except PDFParseError as exc:
+        logger.exception("PDF parsing error", extra={"upload_id": upload_id, "file_path": str(pdf_path)})
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
+        logger.exception("Unexpected PDF parsing failure", extra={"upload_id": upload_id, "file_path": str(pdf_path)})
+        raise HTTPException(status_code=500, detail="Failed to parse PDF file") from exc
+
+
+@router.get("/{upload_id}/parsed-pdf")
+def get_parsed_pdf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    upload = db.query(Upload).filter(Upload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail=f"Upload with id {upload_id} was not found")
+
+    pdf_parse = (
+        db.query(PDFParse)
+        .filter(PDFParse.upload_id == upload_id)
+        .order_by(PDFParse.id.desc())
+        .first()
+    )
+    if not pdf_parse:
+        raise HTTPException(status_code=404, detail="No parsed PDF information found for this upload")
+
+    return {
+        "upload_id": upload_id,
+        "page_count": pdf_parse.page_count,
+        "metadata": pdf_parse.metadata_json,
+        "text_block_count": pdf_parse.text_block_count,
+        "total_text_count": pdf_parse.total_text_count,
+        "text_blocks": pdf_parse.text_blocks,
+        "created_at": pdf_parse.created_at.isoformat(),
+    }
 
 
 @router.get("/{upload_id}/parsed-entities")

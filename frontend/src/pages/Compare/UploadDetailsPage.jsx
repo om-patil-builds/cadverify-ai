@@ -7,7 +7,9 @@ import {
   downloadUploadPdf,
   fetchUploadById,
   fetchParsedDxfEntities,
+  fetchParsedPdf,
   parseUploadDxf,
+  parseUploadPdf,
 } from '../../services/backendService';
 import { formatDateTime } from '../../utils/formatDate';
 
@@ -21,6 +23,9 @@ const UploadDetailsPage = () => {
   const [parseLoading, setParseLoading] = useState(false);
   const [parseError, setParseError] = useState('');
   const [parseResult, setParseResult] = useState(null);
+  const [pdfParseLoading, setPdfParseLoading] = useState(false);
+  const [pdfParseError, setPdfParseError] = useState('');
+  const [pdfParseResult, setPdfParseResult] = useState(null);
 
   useEffect(() => {
     const loadUpload = async () => {
@@ -45,8 +50,20 @@ const UploadDetailsPage = () => {
       }
     };
 
+    const loadParsedPdf = async () => {
+      try {
+        const parsed = await fetchParsedPdf(uploadId);
+        setPdfParseResult(parsed);
+      } catch (err) {
+        if (err?.response?.status !== 404) {
+          setPdfParseError('Unable to load previous PDF parse results.');
+        }
+      }
+    };
+
     loadUpload();
     loadParsedEntities();
+    loadParsedPdf();
   }, [uploadId]);
 
   const handleDelete = async () => {
@@ -98,6 +115,23 @@ const UploadDetailsPage = () => {
       setParseError(err?.response?.data?.detail || 'DXF parsing failed. Please try again.');
     } finally {
       setParseLoading(false);
+    }
+  };
+
+  const handleParsePdf = async () => {
+    if (!upload) return;
+
+    setPdfParseLoading(true);
+    setPdfParseError('');
+    setPdfParseResult(null);
+
+    try {
+      const response = await parseUploadPdf(upload.id);
+      setPdfParseResult(response.parsed);
+    } catch (err) {
+      setPdfParseError(err?.response?.data?.detail || 'PDF parsing failed. Please try again.');
+    } finally {
+      setPdfParseLoading(false);
     }
   };
 
@@ -195,6 +229,19 @@ const UploadDetailsPage = () => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
+                  <Circle className={`mt-1 h-5 w-5 ${pdfParseResult ? 'text-emerald-400' : pdfParseLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
+                  <div>
+                    <p className="font-semibold text-white">PDF Parsing</p>
+                    <p className="text-slate-500">
+                      {pdfParseLoading
+                        ? 'Parsing in progress'
+                        : pdfParseResult
+                        ? 'Parsed successfully'
+                        : 'Ready to parse'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
                   <Circle className="mt-1 h-5 w-5 text-slate-500" />
                   <div>
                     <p className="font-semibold text-white">Drawing Comparison</p>
@@ -223,6 +270,14 @@ const UploadDetailsPage = () => {
                   className="rounded-3xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-white hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {parseLoading ? 'Parsing DXF…' : 'Parse DXF'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleParsePdf}
+                  disabled={pdfParseLoading}
+                  className="rounded-3xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-white hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pdfParseLoading ? 'Parsing PDF…' : 'Parse PDF'}
                 </button>
                 <button
                   type="button"
@@ -267,6 +322,51 @@ const UploadDetailsPage = () => {
                           <p className="mt-1 text-lg font-semibold text-white">{count}</p>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
+              <h3 className="text-lg font-semibold text-white">PDF Parsing Status</h3>
+              <div className="mt-6 space-y-4 text-sm text-slate-400">
+                <div>
+                  <span className="block text-slate-500">Status</span>
+                  <p className="text-white">
+                    {pdfParseLoading
+                      ? 'Parsing in progress...'
+                      : pdfParseResult
+                      ? 'Parsed successfully'
+                      : 'Not yet parsed'}
+                  </p>
+                </div>
+                {pdfParseError ? (
+                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {pdfParseError}
+                  </div>
+                ) : null}
+                {pdfParseResult ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                    <div>
+                      <span className="block text-slate-500">Number of Pages</span>
+                      <p className="text-white">{pdfParseResult.page_count}</p>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500">Text Block Count</span>
+                      <p className="text-white">{pdfParseResult.text_block_count}</p>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500">Total Text Count</span>
+                      <p className="text-white">{pdfParseResult.total_text_count}</p>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500">Metadata Available</span>
+                      <p className="text-white">
+                        {pdfParseResult.metadata && Object.values(pdfParseResult.metadata).some(Boolean)
+                          ? 'Yes'
+                          : 'No'}
+                      </p>
                     </div>
                   </div>
                 ) : null}
