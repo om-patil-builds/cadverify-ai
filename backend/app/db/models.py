@@ -21,6 +21,13 @@ class Upload(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    pdf_parse = relationship(
+        "PDFParse",
+        back_populates="upload",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class DXFEntity(Base):
@@ -34,3 +41,18 @@ class DXFEntity(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     upload = relationship("Upload", back_populates="entities")
+
+
+class PDFParse(Base):
+    __tablename__ = "pdf_parses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    upload_id = Column(Integer, ForeignKey("uploads.id", ondelete="CASCADE"), nullable=False)
+    page_count = Column(Integer, nullable=False)
+    metadata_json = Column(JSON, nullable=True)
+    text_blocks = Column(JSON, nullable=False)
+    text_block_count = Column(Integer, nullable=False)
+    total_text_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    upload = relationship("Upload", back_populates="pdf_parse")

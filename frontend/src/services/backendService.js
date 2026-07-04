@@ -44,8 +44,18 @@ export const parseUploadDxf = async (uploadId) => {
   return response.data;
 };
 
+export const parseUploadPdf = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/parse-pdf`);
+  return response.data;
+};
+
 export const fetchParsedDxfEntities = async (uploadId) => {
   const response = await apiClient.get(`/uploads/${uploadId}/parsed-entities`);
+  return response.data;
+};
+
+export const fetchParsedPdf = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/parsed-pdf`);
   return response.data;
 };
 
