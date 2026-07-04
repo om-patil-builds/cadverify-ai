@@ -13,6 +13,7 @@ class Settings:
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", "8000"))
     secret_key: str = os.getenv("SECRET_KEY", "changeme")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:root@localhost:5432/cadverify_ai")
     allowed_hosts: List[str] = [
         host.strip() for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()
     ]
