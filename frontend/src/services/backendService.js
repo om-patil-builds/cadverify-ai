@@ -38,6 +38,17 @@ export const downloadUploadPdf = async (uploadId, fileName) => {
 export const downloadUploadDxf = async (uploadId, fileName) => {
   return downloadBlob(`/uploads/${uploadId}/download/dxf`, fileName);
 };
+
+export const parseUploadDxf = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/parse`);
+  return response.data;
+};
+
+export const fetchParsedDxfEntities = async (uploadId) => {
+  const response = await apiClient.get(`/uploads/${uploadId}/parsed-entities`);
+  return response.data;
+};
+
 export const uploadDrawingFiles = async ({ pdfFile, dxfFile, onUploadProgress }) => {
   const formData = new FormData();
   formData.append('pdf_file', pdfFile);
