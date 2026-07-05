@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, Circle, Download, File, FileText, Trash2 } from 'lucide-react';
 import {
-  compareUpload,
-  deleteUpload,
-  downloadUploadDxf,
-  downloadUploadPdf,
-  fetchComparisonResult,
-  fetchUploadById,
-  fetchParsedDxfEntities,
-  fetchParsedPdf,
-  parseUploadDxf,
-  parseUploadPdf,
+    compareUpload,
+    deleteUpload,
+    downloadUploadDxf,
+    downloadUploadPdf,
+    downloadReport,
+    fetchComparisonResult,
+    fetchParsedDxfEntities,
+    fetchParsedPdf,
+    generateReport,
+    fetchReportByUpload,
+    parseUploadDxf,
+    parseUploadPdf,
 } from '../../services/backendService';
 import { formatDateTime } from '../../utils/formatDate';
 
@@ -31,6 +33,9 @@ const UploadDetailsPage = () => {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState('');
   const [compareResult, setCompareResult] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportResult, setReportResult] = useState(null);
 
   useEffect(() => {
     const loadUpload = async () => {
@@ -77,10 +82,22 @@ const UploadDetailsPage = () => {
       }
     };
 
+    const loadReportResult = async () => {
+      try {
+        const result = await fetchReportByUpload(uploadId);
+        setReportResult(result);
+      } catch (err) {
+        if (err?.response?.status !== 404) {
+          // Report not found - that's expected for new uploads
+        }
+      }
+    };
+
     loadUpload();
     loadParsedEntities();
     loadParsedPdf();
     loadComparisonResult();
+    loadReportResult();
   }, [uploadId]);
 
   const handleDelete = async () => {
@@ -166,6 +183,32 @@ const UploadDetailsPage = () => {
       setCompareError(err?.response?.data?.detail || 'Comparison failed. Make sure both DXF and PDF are parsed first.');
     } finally {
       setCompareLoading(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!upload || !compareResult) return;
+
+    setReportLoading(true);
+    setReportError('');
+    setReportResult(null);
+
+    try {
+      const result = await generateReport(upload.id);
+      setReportResult(result);
+    } catch (err) {
+      setReportError(err?.response?.data?.detail || 'Report generation failed. Please try again.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!reportResult) return;
+    try {
+      await downloadReport(reportResult.id, reportResult.report_filename);
+    } catch (err) {
+      setError('Unable to download report file.');
     }
   };
 
@@ -279,10 +322,16 @@ const UploadDetailsPage = () => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Circle className="mt-1 h-5 w-5 text-slate-500" />
+                  <Circle className={`mt-1 h-5 w-5 ${reportResult ? 'text-emerald-400' : reportLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
                   <div>
                     <p className="font-semibold text-white">Report Generation</p>
-                    <p className="text-sm text-slate-500">Available in next milestone.</p>
+                    <p className="text-sm text-slate-500">
+                      {reportLoading
+                        ? 'Generating report...'
+                        : reportResult
+                          ? 'Completed'
+                          : 'Available after comparison'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -368,6 +417,19 @@ const UploadDetailsPage = () => {
                 >
                   {compareLoading ? 'Comparing…' : 'Start Comparison'}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateReport}
+                  disabled={reportLoading || !compareResult}
+                  className="rounded-3xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {reportLoading ? 'Generating Report…' : reportResult ? 'Regenerate Report' : 'Generate Report'}
+                </button>
+                {reportError ? (
+                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {reportError}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -471,6 +533,14 @@ const UploadDetailsPage = () => {
                   className="rounded-3xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-700"
                 >
                   Download DXF
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadReport}
+                  disabled={!reportResult}
+                  className="rounded-3xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {reportResult ? 'Download Report' : 'Report Not Generated'}
                 </button>
               </div>
             </div>
