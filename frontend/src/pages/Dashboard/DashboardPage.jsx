@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, FileCheck2, FileText, Layers3 } from 'lucide-react';
+import { Activity, FileCheck2, Layers3 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import UploadCard from '../../components/ui/UploadCard';
 import { checkBackendHealth, fetchUploads } from '../../services/backendService';
@@ -12,7 +12,6 @@ const DashboardPage = () => {
   const [uploads, setUploads] = useState([]);
   const [uploadCount, setUploadCount] = useState(0);
   const [comparisonCount, setComparisonCount] = useState(0);
-  const [reportCount, setReportCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,15 +38,12 @@ const DashboardPage = () => {
           const total = response?.total ?? response?.count ?? 0;
           setUploadCount(total);
           setComparisonCount(response?.comparison_count ?? 0);
-          setReportCount(response?.report_count ?? 0);
           setUploads(response?.uploads ?? []);
         }
       } catch (error) {
         if (isMounted) {
           setUploads([]);
           setUploadCount(0);
-          setComparisonCount(0);
-          setReportCount(0);
         }
       }
     };
@@ -80,9 +76,8 @@ const DashboardPage = () => {
         icon: Layers3,
       },
       { title: 'Comparison Reports', value: comparisonCount.toString(), description: comparisonCount === 0 ? 'No comparisons completed yet' : 'Completed drawing comparisons', icon: FileCheck2 },
-      { title: 'Generated Reports', value: reportCount.toString(), description: reportCount === 0 ? 'No reports generated yet' : 'PDF verification reports', icon: FileText },
     ],
-    [backendMessage, backendStatus, uploadCount, comparisonCount, reportCount]
+    [backendMessage, backendStatus, uploadCount, comparisonCount]
   );
 
   const navigate = useNavigate();

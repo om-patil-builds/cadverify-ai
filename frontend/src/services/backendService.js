@@ -74,11 +74,6 @@ export const fetchReports = async () => {
   return response.data;
 };
 
-export const fetchReportByUpload = async (uploadId) => {
-  const response = await apiClient.get(`/reports/uploads/${uploadId}`);
-  return response.data;
-};
-
 export const downloadReport = async (reportId, fileName) => {
   return downloadBlob(`/reports/${reportId}/download`, fileName);
 };

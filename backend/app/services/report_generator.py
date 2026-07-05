@@ -91,7 +91,7 @@ def _build_report_pdf(
     story.append(Spacer(1, 0.2 * inch))
 
     story.append(Paragraph("Parsing Status", heading_style))
-    dxf_status = "Completed" if comparison else "Not Available"
+    dxf_status = "Completed" if pdf_parse else "Not Available"
     pdf_status = "Completed" if pdf_parse else "Not Available"
     parsing_data = [
         [Paragraph("DXF Parsing Status", label_style), Paragraph(dxf_status, body_style)],
