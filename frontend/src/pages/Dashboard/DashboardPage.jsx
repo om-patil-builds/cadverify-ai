@@ -11,6 +11,7 @@ const DashboardPage = () => {
   const [backendMessage, setBackendMessage] = useState('Checking backend connection...');
   const [uploads, setUploads] = useState([]);
   const [uploadCount, setUploadCount] = useState(0);
+  const [comparisonCount, setComparisonCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,6 +37,7 @@ const DashboardPage = () => {
         if (isMounted) {
           const total = response?.total ?? response?.count ?? 0;
           setUploadCount(total);
+          setComparisonCount(response?.comparison_count ?? 0);
           setUploads(response?.uploads ?? []);
         }
       } catch (error) {
@@ -73,9 +75,9 @@ const DashboardPage = () => {
         description: uploadCount === 0 ? 'No drawings uploaded yet' : 'Database-backed upload count',
         icon: Layers3,
       },
-      { title: 'Comparison Reports', value: '0', description: 'Reports queue is currently empty', icon: FileCheck2 },
+      { title: 'Comparison Reports', value: comparisonCount.toString(), description: comparisonCount === 0 ? 'No comparisons completed yet' : 'Completed drawing comparisons', icon: FileCheck2 },
     ],
-    [backendMessage, backendStatus, uploadCount]
+    [backendMessage, backendStatus, uploadCount, comparisonCount]
   );
 
   const navigate = useNavigate();

@@ -7,7 +7,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import DXFEntity, PDFParse, Upload
+from app.db.models import ComparisonResult, DXFEntity, PDFParse, Upload
+from app.services.comparison import ComparisonError, compare_upload_data
 from app.services.dxf_parser import DXFParseError, parse_dxf
 from app.services.pdf_parser import PDFParseError, parse_pdf
 
@@ -19,8 +20,10 @@ router = APIRouter(prefix="/uploads", tags=["Uploads"])
 @router.get("")
 def list_uploads(db: Session = Depends(get_db)) -> Dict[str, Any]:
     uploads = db.query(Upload).order_by(Upload.created_at.desc()).all()
+    comparison_count = db.query(ComparisonResult).count()
     return {
         "count": len(uploads),
+        "comparison_count": comparison_count,
         "uploads": [
             {
                 "id": upload.id,
@@ -209,4 +212,50 @@ def get_parsed_entities(upload_id: int, db: Session = Depends(get_db)) -> Dict[s
             }
             for entity in entities
         ],
+    }
+
+
+@router.get("/{upload_id}/compare")
+def compare_upload(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    upload = db.query(Upload).filter(Upload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail=f"Upload with id {upload_id} was not found")
+
+    try:
+        comparison_data = compare_upload_data(upload_id=upload_id, db=db)
+        return comparison_data
+    except ComparisonError as exc:
+        logger.exception("Comparison error", extra={"upload_id": upload_id})
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
+        logger.exception("Unexpected comparison failure", extra={"upload_id": upload_id})
+        raise HTTPException(status_code=500, detail="Failed to compare upload data") from exc
+
+
+@router.get("/{upload_id}/comparison")
+def get_comparison_result(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    upload = db.query(Upload).filter(Upload.id == upload_id).first()
+    if not upload:
+        raise HTTPException(status_code=404, detail=f"Upload with id {upload_id} was not found")
+
+    comparison = (
+        db.query(ComparisonResult)
+        .filter(ComparisonResult.upload_id == upload_id)
+        .order_by(ComparisonResult.id.desc())
+        .first()
+    )
+    if not comparison:
+        raise HTTPException(status_code=404, detail="No comparison result found for this upload")
+
+    return {
+        "upload_id": upload_id,
+        "status": comparison.status,
+        "accuracy": comparison.accuracy,
+        "matched_count": comparison.matched_count,
+        "missing_count": comparison.missing_count,
+        "extra_count": comparison.extra_count,
+        "matched": comparison.matched,
+        "missing": comparison.missing,
+        "extra": comparison.extra,
+        "created_at": comparison.created_at.isoformat(),
     }

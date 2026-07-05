@@ -9,10 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.api.dxf_routes import router as dxf_router
+from app.api.report_routes import router as report_router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
 from app.db.database import get_db, initialize_database
-from app.db.models import Upload
+from app.db.models import ComparisonResult, Report, Upload
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(dxf_router)
+app.include_router(report_router)
 
 BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
 UPLOAD_DIR: Final[Path] = BASE_DIR / "uploads"
@@ -119,15 +121,17 @@ async def upload_files(
 @app.get("/uploads")
 def list_uploads(db: Session = Depends(get_db)) -> dict[str, object]:
     uploads = db.query(Upload).order_by(Upload.created_at.desc()).all()
+    comparison_count = db.query(ComparisonResult).count()
+    report_count = db.query(Report).count()
     return {
         "total": len(uploads),
+        "comparison_count": comparison_count,
+        "report_count": report_count,
         "uploads": [
             {
                 "id": upload.id,
                 "pdf_filename": upload.pdf_filename,
                 "dxf_filename": upload.dxf_filename,
-                "pdf_path": upload.pdf_path,
-                "dxf_path": upload.dxf_path,
                 "created_at": upload.created_at.isoformat(),
             }
             for upload in uploads

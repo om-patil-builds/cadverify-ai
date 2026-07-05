@@ -1,0 +1,72 @@
+[33mcommit c8d4a3867f28ed57dcf38e9b61ac27974c0a2dcb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/pdf-parser[m[33m, [m[1;31morigin/feature/pdf-parser[m[33m)[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 23:32:08 2026 +0530
+
+    pdf parser
+
+[33mcommit 382c25e96a4c45f271416a84ca3cdd49a3cd0b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Merge: 1e8ed7f 152ca90
+Author: om-patil-builds <ompatil0993@gmail.com>
+Date:   Sat Jul 4 23:13:48 2026 +0530
+
+    Merge pull request #3 from om-patil-builds/feature/dxf-parser
+    
+    Feature/dxf parser
+
+[33mcommit 152ca90faca8e77ee0d7fac529602376bd629433[m[33m ([m[1;31morigin/feature/dxf-parser[m[33m, [m[1;32mfeature/dxf-parser[m[33m)[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 22:58:24 2026 +0530
+
+    dxf parser
+
+[33mcommit 575d79ca35358bbd91d95897387766dfa295dd1a[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 22:42:18 2026 +0530
+
+    dxf-parser
+
+[33mcommit 1e8ed7f9c34d430d0cb1382eabe634cb974a17df[m[33m ([m[1;32mfeature/dashboard-workspace[m[33m)[m
+Merge: cf727a9 541d8b4
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 17:14:32 2026 +0530
+
+    Merge branch 'feature/dashboard-workspace' into main — resolve conflicts: merge frontend/dashboard, compare, backend main and DB messages; preserve features and DB changes
+
+[33mcommit cf727a904c773d3ca7b2f9771e4dc39b7efc3568[m[33m ([m[1;31morigin/feature/dashboard-workspace[m[33m, [m[1;32mfeature/file-upload[m[33m)[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 16:23:46 2026 +0530
+
+    Biggest Changes
+
+[33mcommit 541d8b4a2dcf2f5dddf5db25904af4666134512e[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 14:51:28 2026 +0530
+
+    second commit
+
+[33mcommit 60dac1e1e32b4f116337f1b775189e3b20c25b55[m
+Merge: a321c0a c71a7cb
+Author: om-patil-builds <ompatil0993@gmail.com>
+Date:   Sat Jul 4 14:46:59 2026 +0530
+
+    Merge pull request #1 from om-patil-builds/dbsetup
+    
+    Dbsetup
+
+[33mcommit c71a7cbd4d46e4bcf52320b949f4aa5a584e80e3[m[33m ([m[1;31morigin/dbsetup[m[33m, [m[1;32mdbsetup[m[33m)[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 14:45:21 2026 +0530
+
+    db connection
+
+[33mcommit 1ef50eaa1c9a09dcc6f12d44a2f2ef5b68d5f10d[m[33m ([m[1;31morigin/feature/file-upload[m[33m)[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 14:11:16 2026 +0530
+
+    add upload feature
+
+[33mcommit a321c0a826866cacc31985f9d1b53ee29f60a746[m
+Author: om-patil-builds <vp8843o3@gmail.com>
+Date:   Sat Jul 4 11:42:57 2026 +0530
+
+    first commit
