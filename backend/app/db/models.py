@@ -35,6 +35,12 @@ class Upload(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    reports = relationship(
+        "Report",
+        back_populates="upload",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class DXFEntity(Base):
@@ -81,3 +87,20 @@ class ComparisonResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     upload = relationship("Upload", back_populates="comparison_results")
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    upload_id = Column(Integer, ForeignKey("uploads.id", ondelete="CASCADE"), nullable=False)
+    report_filename = Column(String(255), nullable=False)
+    report_path = Column(String(500), nullable=False)
+    status = Column(String(50), nullable=False)
+    accuracy = Column(Float, nullable=False)
+    matched_count = Column(Integer, nullable=False)
+    missing_count = Column(Integer, nullable=False)
+    extra_count = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    upload = relationship("Upload", back_populates="reports")

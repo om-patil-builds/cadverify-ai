@@ -197,68 +197,62 @@ const UploadDetailsPage = () => {
           </button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.75fr_1fr]">
           <div className="space-y-6">
             <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
               <h3 className="text-lg font-semibold text-white">Upload Information</h3>
-              <div className="mt-4 space-y-3 text-sm text-slate-400">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <span className="block text-slate-500">Upload ID</span>
-                  <p className="text-white">{upload.id}</p>
+                  <span className="block text-sm text-slate-500">Upload ID</span>
+                  <p className="mt-1 text-white">{upload.id}</p>
                 </div>
                 <div>
-                  <span className="block text-slate-500">Upload Date</span>
-                  <p className="text-white">{formatDateTime(upload.created_at)}</p>
+                  <span className="block text-sm text-slate-500">Upload Date</span>
+                  <p className="mt-1 text-white">{formatDateTime(upload.created_at)}</p>
                 </div>
-                <div>
-                  <span className="block text-slate-500">Status</span>
-                  <p className="text-emerald-300">Uploaded</p>
+                <div className="sm:col-span-2">
+                  <span className="block text-sm text-slate-500">Status</span>
+                  <p className="mt-1 text-emerald-300">Uploaded</p>
                 </div>
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
               <h3 className="text-lg font-semibold text-white">Drawing Pair</h3>
-              <div className="mt-6 space-y-4 text-sm text-slate-400">
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                  <FileText className="h-5 w-5 text-cyan-400" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-slate-500">PDF</p>
-                    <p className="truncate text-white">{upload.pdf_filename}</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <FileText className="h-4 w-4 text-cyan-400" />
+                    <span className="text-xs uppercase tracking-[0.2em]">PDF</span>
                   </div>
-                  <span className="rounded-full bg-slate-800 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-400">PDF</span>
+                  <p className="mt-2 truncate text-sm text-white" title={upload.pdf_filename}>{upload.pdf_filename}</p>
                 </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                  <File className="h-5 w-5 text-emerald-400" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-slate-500">DXF</p>
-                    <p className="truncate text-white">{upload.dxf_filename}</p>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <File className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs uppercase tracking-[0.2em]">DXF</span>
                   </div>
-                  <span className="rounded-full bg-slate-800 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-400">DXF</span>
+                  <p className="mt-2 truncate text-sm text-white" title={upload.dxf_filename}>{upload.dxf_filename}</p>
                 </div>
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
               <h3 className="text-lg font-semibold text-white">Progress Timeline</h3>
-              <div className="mt-6 space-y-4 text-sm text-slate-400">
+              <div className="mt-6 space-y-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle className="mt-1 h-5 w-5 text-emerald-400" />
                   <div>
                     <p className="font-semibold text-white">Uploaded</p>
-                    <p className="text-slate-500">The drawing pair is stored and ready for review.</p>
+                    <p className="text-sm text-slate-500">The drawing pair is stored and ready for review.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Circle className="mt-1 h-5 w-5 text-cyan-400" />
+                  <Circle className={`mt-1 h-5 w-5 ${parseResult ? 'text-emerald-400' : parseLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
                   <div>
                     <p className="font-semibold text-white">DXF Parsing</p>
-                    <p className="text-slate-500">
-                      {parseLoading
-                        ? 'Parsing in progress'
-                        : parseResult
-                        ? 'Parsed successfully'
-                        : 'Ready to parse'}
+                    <p className="text-sm text-slate-500">
+                      {parseLoading ? 'Parsing in progress' : parseResult ? 'Parsed successfully' : 'Ready to parse'}
                     </p>
                   </div>
                 </div>
@@ -266,12 +260,8 @@ const UploadDetailsPage = () => {
                   <Circle className={`mt-1 h-5 w-5 ${pdfParseResult ? 'text-emerald-400' : pdfParseLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
                   <div>
                     <p className="font-semibold text-white">PDF Parsing</p>
-                    <p className="text-slate-500">
-                      {pdfParseLoading
-                        ? 'Parsing in progress'
-                        : pdfParseResult
-                        ? 'Parsed successfully'
-                        : 'Ready to parse'}
+                    <p className="text-sm text-slate-500">
+                      {pdfParseLoading ? 'Parsing in progress' : pdfParseResult ? 'Parsed successfully' : 'Ready to parse'}
                     </p>
                   </div>
                 </div>
@@ -279,12 +269,12 @@ const UploadDetailsPage = () => {
                   <Circle className={`mt-1 h-5 w-5 ${compareResult ? 'text-emerald-400' : compareLoading ? 'text-yellow-400' : 'text-slate-500'}`} />
                   <div>
                     <p className="font-semibold text-white">Drawing Comparison</p>
-                    <p className="text-slate-500">
+                    <p className="text-sm text-slate-500">
                       {compareLoading
                         ? 'Comparison in progress'
                         : compareResult
-                        ? `Completed — ${compareResult.accuracy}% accuracy`
-                        : 'Ready to compare'}
+                          ? `Completed — ${compareResult.accuracy}% accuracy`
+                          : 'Ready to compare'}
                     </p>
                   </div>
                 </div>
@@ -292,9 +282,60 @@ const UploadDetailsPage = () => {
                   <Circle className="mt-1 h-5 w-5 text-slate-500" />
                   <div>
                     <p className="font-semibold text-white">Report Generation</p>
-                    <p className="text-slate-500">Available in next milestone.</p>
+                    <p className="text-sm text-slate-500">Available in next milestone.</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
+              <h3 className="text-lg font-semibold text-white">Comparison Results</h3>
+              <div className="mt-6 space-y-4">
+                <div>
+                  <span className="block text-sm text-slate-500">Status</span>
+                  <p className="text-white">
+                    {compareLoading
+                      ? 'Comparison in progress...'
+                      : compareResult
+                        ? 'Comparison completed'
+                        : 'Not yet compared'}
+                  </p>
+                </div>
+                {compareError ? (
+                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {compareError}
+                  </div>
+                ) : null}
+                {compareResult ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accuracy</p>
+                      <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.accuracy}%</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Matched</p>
+                      <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.matched_count}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Missing</p>
+                      <p className="mt-1 text-2xl font-bold text-rose-400">{compareResult.missing_count}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Extra</p>
+                      <p className="mt-1 text-2xl font-bold text-amber-400">{compareResult.extra_count}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center text-sm text-slate-500">
+                    Run a comparison to see accuracy metrics and entity counts.
+                  </div>
+                )}
+                {compareResult ? (
+                  <div>
+                    <span className="block text-sm text-slate-500">Status</span>
+                    <p className="font-semibold text-emerald-300">{compareResult.status}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -334,13 +375,13 @@ const UploadDetailsPage = () => {
               <h3 className="text-lg font-semibold text-white">DXF Parsing Status</h3>
               <div className="mt-6 space-y-4 text-sm text-slate-400">
                 <div>
-                  <span className="block text-slate-500">Status</span>
+                  <span className="block text-sm text-slate-500">Status</span>
                   <p className="text-white">
                     {parseLoading
                       ? 'Parsing in progress...'
                       : parseResult
-                      ? 'Parsed successfully'
-                      : 'Not yet parsed'}
+                        ? 'Parsed successfully'
+                        : 'Not yet parsed'}
                   </p>
                 </div>
                 {parseError ? (
@@ -349,9 +390,9 @@ const UploadDetailsPage = () => {
                   </div>
                 ) : null}
                 {parseResult ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
                     <div>
-                      <span className="block text-slate-500">Total Entities</span>
+                      <span className="block text-sm text-slate-500">Total Entities</span>
                       <p className="text-white">
                         {Object.values(parseResult.summary).reduce((sum, count) => sum + count, 0)}
                       </p>
@@ -359,7 +400,7 @@ const UploadDetailsPage = () => {
                     <div className="grid gap-2 sm:grid-cols-2">
                       {Object.entries(parseResult.summary).map(([entityType, count]) => (
                         <div key={entityType} className="rounded-2xl bg-slate-950/80 p-3">
-                          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">{entityType}</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{entityType}</p>
                           <p className="mt-1 text-lg font-semibold text-white">{count}</p>
                         </div>
                       ))}
@@ -373,13 +414,13 @@ const UploadDetailsPage = () => {
               <h3 className="text-lg font-semibold text-white">PDF Parsing Status</h3>
               <div className="mt-6 space-y-4 text-sm text-slate-400">
                 <div>
-                  <span className="block text-slate-500">Status</span>
+                  <span className="block text-sm text-slate-500">Status</span>
                   <p className="text-white">
                     {pdfParseLoading
                       ? 'Parsing in progress...'
                       : pdfParseResult
-                      ? 'Parsed successfully'
-                      : 'Not yet parsed'}
+                        ? 'Parsed successfully'
+                        : 'Not yet parsed'}
                   </p>
                 </div>
                 {pdfParseError ? (
@@ -388,73 +429,26 @@ const UploadDetailsPage = () => {
                   </div>
                 ) : null}
                 {pdfParseResult ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
                     <div>
-                      <span className="block text-slate-500">Number of Pages</span>
+                      <span className="block text-sm text-slate-500">Number of Pages</span>
                       <p className="text-white">{pdfParseResult.page_count}</p>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Text Block Count</span>
+                      <span className="block text-sm text-slate-500">Text Block Count</span>
                       <p className="text-white">{pdfParseResult.text_block_count}</p>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Total Text Count</span>
+                      <span className="block text-sm text-slate-500">Total Text Count</span>
                       <p className="text-white">{pdfParseResult.total_text_count}</p>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Metadata Available</span>
+                      <span className="block text-sm text-slate-500">Metadata Available</span>
                       <p className="text-white">
                         {pdfParseResult.metadata && Object.values(pdfParseResult.metadata).some(Boolean)
                           ? 'Yes'
                           : 'No'}
                       </p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
-              <h3 className="text-lg font-semibold text-white">Comparison Results</h3>
-              <div className="mt-6 space-y-4 text-sm text-slate-400">
-                <div>
-                  <span className="block text-slate-500">Status</span>
-                  <p className="text-white">
-                    {compareLoading
-                      ? 'Comparison in progress...'
-                      : compareResult
-                      ? 'Comparison completed'
-                      : 'Not yet compared'}
-                  </p>
-                </div>
-                {compareError ? (
-                  <div className="rounded-2xl border border-rose-500 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                    {compareError}
-                  </div>
-                ) : null}
-                {compareResult ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
-                    <div className="rounded-2xl bg-slate-950/80 p-4 text-center">
-                      <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Accuracy</p>
-                      <p className="mt-1 text-3xl font-bold text-emerald-400">{compareResult.accuracy}%</p>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-slate-950/80 p-3">
-                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Matched</p>
-                        <p className="mt-1 text-lg font-semibold text-emerald-400">{compareResult.matched_count}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-950/80 p-3">
-                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Missing</p>
-                        <p className="mt-1 text-lg font-semibold text-rose-400">{compareResult.missing_count}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-950/80 p-3">
-                        <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Extra</p>
-                        <p className="mt-1 text-lg font-semibold text-amber-400">{compareResult.extra_count}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="block text-slate-500">Status</span>
-                      <p className="font-semibold text-emerald-300">{compareResult.status}</p>
                     </div>
                   </div>
                 ) : null}
@@ -481,8 +475,8 @@ const UploadDetailsPage = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
-              <h3 className="text-lg font-semibold text-white">Danger Zone</h3>
+            <div className="rounded-3xl border border-rose-500/20 bg-slate-950/70 p-6">
+              <h3 className="text-lg font-semibold text-rose-300">Danger Zone</h3>
               <button
                 type="button"
                 onClick={handleDelete}

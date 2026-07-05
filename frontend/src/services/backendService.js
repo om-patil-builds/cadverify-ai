@@ -64,6 +64,20 @@ export const fetchComparisonResult = async (uploadId) => {
   return response.data;
 };
 
+export const generateReport = async (uploadId) => {
+  const response = await apiClient.post(`/reports/${uploadId}/generate`);
+  return response.data;
+};
+
+export const fetchReports = async () => {
+  const response = await apiClient.get('/reports');
+  return response.data;
+};
+
+export const downloadReport = async (reportId, fileName) => {
+  return downloadBlob(`/reports/${reportId}/download`, fileName);
+};
+
 export const compareUpload = async (uploadId) => {
   const response = await apiClient.get(`/uploads/${uploadId}/compare`);
   return response.data;
