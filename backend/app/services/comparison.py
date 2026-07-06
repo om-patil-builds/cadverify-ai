@@ -430,6 +430,64 @@ def compare_upload_data(upload_id: int, db: Session) -> Dict[str, Any]:
     overall_tot = tot_matched + tot_missing + tot_extra
     overall_accuracy = round((tot_matched / overall_tot) * 100, 2) if overall_tot > 0 else 100.0
 
+    geometry = compare_geometry(
+        pdf_parse.text_blocks or [],
+        dxf_entities,
+    )
+
+    overall_matched_count = matched_count + geometry["summary"]["matched"]
+    overall_missing_count = missing_count + geometry["summary"]["missing"]
+    overall_extra_count = extra_count + geometry["summary"]["extra"]
+    overall_changed_count = geometry["summary"]["changed"]
+
+    geometry_changed_entities: List[Dict[str, Any]] = []
+    for etype_data in geometry["entity_types"].values():
+        geometry_changed_entities.extend(etype_data.get("changed", []))
+
+    combined_changed = [
+        {
+            "category": "geometry",
+            "type": item["type"],
+            "dxf_id": item["dxf_id"],
+            "layer": item["layer"],
+            "change_type": "geometry_changed",
+            "iou": item.get("iou"),
+            "page": item.get("page"),
+            "entity_bbox": item.get("entity_bbox"),
+            "pdf_bbox": item.get("pdf_bbox"),
+            "area_ratio": item.get("area_ratio"),
+        }
+        for item in geometry_changed_entities
+    ]
+
+    combined_matched = (
+        [{"category": "text", **item} for item in matched]
+        + [
+            {"category": "geometry", **item}
+            for etype_data in geometry["entity_types"].values()
+            for item in etype_data.get("matched", [])
+        ]
+    )
+    combined_missing = (
+        [{"category": "text", **item} for item in missing]
+        + [
+            {"category": "geometry", **item}
+            for etype_data in geometry["entity_types"].values()
+            for item in etype_data.get("missing", [])
+        ]
+    )
+    combined_extra = (
+        [{"category": "text", **item} for item in extra]
+        + [
+            {"category": "geometry", **item}
+            for etype_data in geometry["entity_types"].values()
+            for item in etype_data.get("extra", [])
+        ]
+    )
+
+    overall_total = overall_matched_count + overall_missing_count + overall_extra_count + overall_changed_count
+    overall_accuracy = round((overall_matched_count / overall_total) * 100, 2) if overall_total > 0 else 100.0
+
     comparison_payload = {
         "upload_id": upload_id,
         "status": "completed",

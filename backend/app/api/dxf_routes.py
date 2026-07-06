@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import ComparisonResult, DXFEntity, PDFParse, Upload
-from app.services.comparison import ComparisonError, compare_upload_data
+from app.services.comparison import ComparisonError, compare_geometry, compare_upload_data
 from app.services.dxf_parser import DXFParseError, parse_dxf
 from app.services.pdf_parser import PDFParseError, parse_pdf
 
@@ -223,6 +223,43 @@ def compare_upload(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, A
 
     try:
         comparison_data = compare_upload_data(upload_id=upload_id, db=db)
+
+        dxf_entities = (
+            db.query(DXFEntity)
+            .filter(DXFEntity.upload_id == upload_id)
+            .order_by(DXFEntity.id)
+            .all()
+        )
+        pdf_parse = (
+            db.query(PDFParse)
+            .filter(PDFParse.upload_id == upload_id)
+            .order_by(PDFParse.id.desc())
+            .first()
+        )
+        geometry = compare_geometry(pdf_parse.text_blocks if pdf_parse else [], dxf_entities)
+
+        geometry_changed_entities = []
+        for etype_data in geometry["entity_types"].values():
+            geometry_changed_entities.extend(etype_data.get("changed", []))
+
+        comparison_data["changed_count"] = geometry["summary"]["changed"]
+        comparison_data["changed"] = [
+            {
+                "category": "geometry",
+                "type": item["type"],
+                "dxf_id": item["dxf_id"],
+                "layer": item["layer"],
+                "change_type": "geometry_changed",
+                "iou": item.get("iou"),
+                "page": item.get("page"),
+                "entity_bbox": item.get("entity_bbox"),
+                "pdf_bbox": item.get("pdf_bbox"),
+                "area_ratio": item.get("area_ratio"),
+            }
+            for item in geometry_changed_entities
+        ]
+        comparison_data["geometry"] = geometry
+
         return comparison_data
     except ComparisonError as exc:
         logger.exception("Comparison error", extra={"upload_id": upload_id})
@@ -247,6 +284,49 @@ def get_comparison_result(upload_id: int, db: Session = Depends(get_db)) -> Dict
     if not comparison:
         raise HTTPException(status_code=404, detail="No comparison result found for this upload")
 
+    geometry_payload = {
+        "accuracy": comparison.accuracy,
+        "entity_types": {},
+        "summary": {"matched": 0, "missing": 0, "extra": 0, "changed": 0},
+    }
+
+    try:
+        dxf_entities = (
+            db.query(DXFEntity)
+            .filter(DXFEntity.upload_id == upload_id)
+            .order_by(DXFEntity.id)
+            .all()
+        )
+        pdf_parse = (
+            db.query(PDFParse)
+            .filter(PDFParse.upload_id == upload_id)
+            .order_by(PDFParse.id.desc())
+            .first()
+        )
+        geometry_payload = compare_geometry(pdf_parse.text_blocks if pdf_parse else [], dxf_entities)
+    except Exception as exc:  # pragma: no cover - defensive fallback for runtime errors
+        logger.exception("Geometry enrichment failed", extra={"upload_id": upload_id})
+
+    geometry_changed_entities = []
+    for etype_data in geometry_payload.get("entity_types", {}).values():
+        geometry_changed_entities.extend(etype_data.get("changed", []))
+
+    changed_items = [
+        {
+            "category": "geometry",
+            "type": item["type"],
+            "dxf_id": item["dxf_id"],
+            "layer": item["layer"],
+            "change_type": "geometry_changed",
+            "iou": item.get("iou"),
+            "page": item.get("page"),
+            "entity_bbox": item.get("entity_bbox"),
+            "pdf_bbox": item.get("pdf_bbox"),
+            "area_ratio": item.get("area_ratio"),
+        }
+        for item in geometry_changed_entities
+    ]
+
     return {
         "upload_id": upload_id,
         "status": comparison.status,
@@ -254,6 +334,7 @@ def get_comparison_result(upload_id: int, db: Session = Depends(get_db)) -> Dict
         "matched_count": comparison.matched_count,
         "missing_count": comparison.missing_count,
         "extra_count": comparison.extra_count,
+        "changed_count": geometry_payload["summary"]["changed"],
         "matched": comparison.matched,
         "missing": comparison.missing,
         "extra": comparison.extra,
