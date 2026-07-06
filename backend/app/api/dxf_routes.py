@@ -375,7 +375,8 @@ def get_comparison_result(upload_id: int, db: Session = Depends(get_db)) -> Dict
         "matched": comparison.matched,
         "missing": comparison.missing,
         "extra": comparison.extra,
-        "changed": changed_items,
-        "geometry": geometry_payload,
+        "categories": comparison.matched,
+        "risk_locations": comparison.missing,
         "created_at": comparison.created_at.isoformat(),
     }
+

@@ -77,6 +77,10 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
         "producer": _safe_text(metadata_raw.get("producer")),
         "creation_date": _safe_text(metadata_raw.get("creationDate")),
     }
+    ocr_status = "not_run"
+    ocr_text_block_count = 0
+    ocr_pages: List[Dict[str, Any]] = []
+    ocr_error = None
 
     text_blocks: List[Dict[str, Any]] = []
     total_text_count = 0
