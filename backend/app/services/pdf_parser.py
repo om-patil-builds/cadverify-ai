@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Optional
 import fitz
 from sqlalchemy.orm import Session
 
-from app.db.models import PDFParse
+from app.db.models import OCRResult, PDFParse
+from app.services.ocr_engine import OCREngineError, OCREngineUnavailable, run_ocr_on_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +37,19 @@ def _extract_block_text(block: Dict[str, Any]) -> Optional[str]:
     return _safe_text("\n".join(processed_lines)) if processed_lines else None
 
 
+_IMAGE_DIR: Path = Path(__file__).resolve().parent.parent.parent / "output" / "ocr_images"
+
+
 def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None = None) -> Dict[str, Any]:
-    """Parse a PDF file and return structured drawing metadata and text blocks.
+    """Parse a PDF file and return structured drawing metadata, text blocks, and OCR results.
 
     Args:
         file_path: Path to the PDF file on disk.
-        db: Optional SQLAlchemy session for persistence of parsed entities.
+        db: Optional SQLAlchemy session for persistence of parsed information.
         upload_id: Optional upload record id to link parsed PDF information.
 
     Returns:
-        A dictionary containing parsed PDF metadata, text blocks, and counts.
+        A dictionary containing parsed PDF metadata, text blocks, and OCR statistics.
 
     Raises:
         PDFParseError: If the file is missing, unreadable, or not a valid PDF.
@@ -103,6 +107,11 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
             )
             total_text_count += len(text.split())
 
+    ocr_status = "not_run"
+    ocr_text_block_count = 0
+    ocr_pages: List[Dict[str, Any]] = []
+    ocr_error = None
+
     if db is not None and upload_id is not None:
         try:
             ocr_result = run_ocr_on_pdf(str(path))
@@ -113,25 +122,6 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
             from app.services.ocr_engine import save_ocr_results
 
             save_ocr_results(upload_id=upload_id, ocr_result=ocr_result, db=db, image_dir=_IMAGE_DIR)
-
-            # Fallback/Merge: If vector text is insufficient, populate text_blocks with OCR blocks
-            if total_text_count < 10 and ocr_pages:
-                logger.info("Vector text count is low. Falling back to OCR text blocks for unified representation.")
-                for ocr_page in ocr_pages:
-                    page_num = ocr_page.get("page", 1)
-                    for block in ocr_page.get("blocks", []):
-                        raw_bbox = block.get("bbox")
-                        # OCR renders at Matrix(2.0, 2.0), scale down by 2.0 to align with PDF page points
-                        scaled_bbox = [v / 2.0 for v in raw_bbox] if raw_bbox else None
-                        text_blocks.append({
-                            "page": page_num,
-                            "bbox": scaled_bbox,
-                            "text": block.get("text"),
-                            "confidence": block.get("confidence"),
-                            "source": "ocr"
-                        })
-                total_text_count = sum(len((b.get("text") or "").split()) for b in text_blocks)
-
         except OCREngineUnavailable as exc:
             logger.warning("OCR skipped: engine unavailable", extra={"upload_id": upload_id, "error": str(exc)})
             ocr_status = "unavailable"

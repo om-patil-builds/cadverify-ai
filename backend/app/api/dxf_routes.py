@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import ComparisonResult, DXFEntity, PDFParse, Upload
+from app.db.models import ComparisonResult, DXFEntity, OCRResult, PDFParse, Upload
 from app.services.comparison import ComparisonError, compare_geometry, compare_upload_data
 from app.services.dxf_parser import DXFParseError, parse_dxf
 from app.services.pdf_parser import PDFParseError, parse_pdf
@@ -170,6 +170,37 @@ def get_parsed_pdf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, A
     if not pdf_parse:
         raise HTTPException(status_code=404, detail="No parsed PDF information found for this upload")
 
+    ocr_results = (
+        db.query(OCRResult)
+        .filter(OCRResult.upload_id == upload_id)
+        .order_by(OCRResult.page_number)
+        .all()
+    )
+
+    ocr_pages = []
+    ocr_text_block_count = 0
+    for ocr in ocr_results:
+        page_data = ocr.ocr_data or {}
+        blocks = page_data.get("blocks", [])
+        ocr_pages.append(
+            {
+                "page": ocr.page_number,
+                "text_block_count": len(blocks),
+                "blocks": blocks,
+            }
+        )
+        ocr_text_block_count += len(blocks)
+
+    ocr_status = "completed" if ocr_results else "not_run"
+    ocr_error = None
+
+    try:
+        from app.services.ocr_engine import _ensure_tesseract_available
+        _ensure_tesseract_available()
+    except Exception as exc:
+        ocr_status = "unavailable"
+        ocr_error = str(exc)
+
     return {
         "upload_id": upload_id,
         "page_count": pdf_parse.page_count,
@@ -177,6 +208,12 @@ def get_parsed_pdf(upload_id: int, db: Session = Depends(get_db)) -> Dict[str, A
         "text_block_count": pdf_parse.text_block_count,
         "total_text_count": pdf_parse.total_text_count,
         "text_blocks": pdf_parse.text_blocks,
+        "ocr": {
+            "status": ocr_status,
+            "text_block_count": ocr_text_block_count,
+            "pages": ocr_pages,
+            "error": ocr_error,
+        },
         "created_at": pdf_parse.created_at.isoformat(),
     }
 
