@@ -429,17 +429,82 @@ const UploadDetailsPage = () => {
                     <div>
                       <span className="block text-sm text-slate-500">Total Entities</span>
                       <p className="text-white">
-                        {Object.values(parseResult.summary).reduce((sum, count) => sum + count, 0)}
-                      </p>
+                {compareResult?.categories ? (
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-6">
+                    <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">Category Breakdown</h4>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {Object.entries(compareResult.categories).map(([cat, data]) => {
+                        const displayName = cat.replace('_', ' ').toUpperCase();
+                        return (
+                          <div key={cat} className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{displayName}</p>
+                            <p className="mt-1 text-xl font-bold text-cyan-300">{data.accuracy}% Accuracy</p>
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                              <div>
+                                <span className="block text-slate-500">Match</span>
+                                <p className="font-semibold text-emerald-400">{data.matched_count}</p>
+                              </div>
+                              <div>
+                                <span className="block text-slate-500">Miss</span>
+                                <p className="font-semibold text-rose-400">{data.missing_count}</p>
+                              </div>
+                              <div>
+                                <span className="block text-slate-500">Extra</span>
+                                <p className="font-semibold text-amber-400">{data.extra_count}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {Object.entries(parseResult.summary).map(([entityType, count]) => (
-                        <div key={entityType} className="rounded-2xl bg-slate-950/80 p-3">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{entityType}</p>
-                          <p className="mt-1 text-lg font-semibold text-white">{count}</p>
-                        </div>
-                      ))}
+                  </div>
+                ) : null}
+
+                {compareResult?.risk_locations && compareResult.risk_locations.length > 0 ? (
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+                    <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-rose-400">Detected Risk Locations (Discrepancies)</h4>
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                      {compareResult.risk_locations.map((risk, index) => {
+                        const severityColors = {
+                          high: 'border-rose-500/20 bg-rose-500/10 text-rose-400',
+                          medium: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
+                          low: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+                        };
+                        const catColors = {
+                          geometry: 'bg-yellow-500/20 text-yellow-300',
+                          dimensions: 'bg-orange-500/20 text-orange-300',
+                          annotations: 'bg-blue-500/20 text-blue-300',
+                          title_block: 'bg-red-500/20 text-red-300',
+                        };
+                        return (
+                          <div key={index} className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-950/40 border-slate-800`}>
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${catColors[risk.category] || 'bg-slate-800 text-slate-300'}`}>
+                                  {risk.category?.replace('_', ' ')}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${severityColors[risk.severity] || 'bg-slate-800'}`}>
+                                  {risk.severity} Severity
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {risk.confidence}% Confidence
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-200 mt-1">{risk.description}</p>
+                              {risk.bbox ? (
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                  Location: Page {risk.page || 1}, Box: [{risk.bbox.map(v => Math.round(v)).join(', ')}]
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
+                ) : compareResult ? (
+                  <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 p-6 text-center text-sm text-emerald-400">
+                    No mismatches or risk locations detected! Drawings match within threshold.
                   </div>
                 ) : null}
               </div>
