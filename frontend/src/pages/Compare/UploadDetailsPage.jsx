@@ -306,26 +306,61 @@ const UploadDetailsPage = () => {
                     {compareError}
                   </div>
                 ) : null}
-                {compareResult ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accuracy</p>
-                      <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.accuracy}%</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Matched</p>
-                      <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.matched_count}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Missing</p>
-                      <p className="mt-1 text-2xl font-bold text-rose-400">{compareResult.missing_count}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Extra</p>
-                      <p className="mt-1 text-2xl font-bold text-amber-400">{compareResult.extra_count}</p>
-                    </div>
-                  </div>
-                ) : (
+                 {compareResult ? (
+                   <div className="space-y-6">
+                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accuracy</p>
+                         <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.accuracy}%</p>
+                       </div>
+                       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Matched</p>
+                         <p className="mt-1 text-2xl font-bold text-emerald-400">{compareResult.matched_count}</p>
+                       </div>
+                       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Missing</p>
+                         <p className="mt-1 text-2xl font-bold text-rose-400">{compareResult.missing_count}</p>
+                       </div>
+                       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-center">
+                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Extra</p>
+                         <p className="mt-1 text-2xl font-bold text-amber-400">{compareResult.extra_count}</p>
+                       </div>
+                     </div>
+                     {compareResult.geometry ? (
+                       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                         <div className="flex items-center justify-between">
+                           <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">Geometry Comparison</h4>
+                           <span className="text-sm text-emerald-300">{compareResult.geometry.accuracy}% accuracy</span>
+                         </div>
+                         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                           {Object.entries(compareResult.geometry.entity_types || {}).map(([type, data]) => (
+                             <div key={type} className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{type}</p>
+                               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                                 <div>
+                                   <span className="block text-slate-500">Matched</span>
+                                   <p className="text-lg font-semibold text-emerald-400">{data.matched_count}</p>
+                                 </div>
+                                 <div>
+                                   <span className="block text-slate-500">Missing</span>
+                                   <p className="text-lg font-semibold text-rose-400">{data.missing_count}</p>
+                                 </div>
+                                 <div>
+                                   <span className="block text-slate-500">Extra</span>
+                                   <p className="text-lg font-semibold text-amber-400">{data.extra_count}</p>
+                                 </div>
+                                 <div>
+                                   <span className="block text-slate-500">Changed</span>
+                                   <p className="text-lg font-semibold text-violet-400">{data.changed_count}</p>
+                                 </div>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     ) : null}
+                   </div>
+                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center text-sm text-slate-500">
                     Run a comparison to see accuracy metrics and entity counts.
                   </div>
