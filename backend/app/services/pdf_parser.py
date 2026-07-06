@@ -73,6 +73,10 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
         "producer": _safe_text(metadata_raw.get("producer")),
         "creation_date": _safe_text(metadata_raw.get("creationDate")),
     }
+    ocr_status = "not_run"
+    ocr_text_block_count = 0
+    ocr_pages: List[Dict[str, Any]] = []
+    ocr_error = None
 
     text_blocks: List[Dict[str, Any]] = []
     total_text_count = 0
@@ -99,12 +103,56 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
             )
             total_text_count += len(text.split())
 
+    if db is not None and upload_id is not None:
+        try:
+            ocr_result = run_ocr_on_pdf(str(path))
+            ocr_pages = ocr_result.get("ocr_pages", [])
+            ocr_text_block_count = ocr_result.get("text_block_count", 0)
+            ocr_status = "completed"
+
+            from app.services.ocr_engine import save_ocr_results
+
+            save_ocr_results(upload_id=upload_id, ocr_result=ocr_result, db=db, image_dir=_IMAGE_DIR)
+
+            # Fallback/Merge: If vector text is insufficient, populate text_blocks with OCR blocks
+            if total_text_count < 10 and ocr_pages:
+                logger.info("Vector text count is low. Falling back to OCR text blocks for unified representation.")
+                for ocr_page in ocr_pages:
+                    page_num = ocr_page.get("page", 1)
+                    for block in ocr_page.get("blocks", []):
+                        raw_bbox = block.get("bbox")
+                        # OCR renders at Matrix(2.0, 2.0), scale down by 2.0 to align with PDF page points
+                        scaled_bbox = [v / 2.0 for v in raw_bbox] if raw_bbox else None
+                        text_blocks.append({
+                            "page": page_num,
+                            "bbox": scaled_bbox,
+                            "text": block.get("text"),
+                            "confidence": block.get("confidence"),
+                            "source": "ocr"
+                        })
+                total_text_count = sum(len((b.get("text") or "").split()) for b in text_blocks)
+
+        except OCREngineUnavailable as exc:
+            logger.warning("OCR skipped: engine unavailable", extra={"upload_id": upload_id, "error": str(exc)})
+            ocr_status = "unavailable"
+            ocr_error = str(exc)
+        except OCREngineError as exc:
+            logger.error("OCR failed", extra={"upload_id": upload_id, "error": str(exc)})
+            ocr_status = "failed"
+            ocr_error = str(exc)
+
     result = {
         "page_count": page_count,
         "metadata": metadata,
         "text_blocks": text_blocks,
         "text_block_count": len(text_blocks),
         "total_text_count": total_text_count,
+        "ocr": {
+            "status": ocr_status,
+            "text_block_count": ocr_text_block_count,
+            "pages": ocr_pages,
+            "error": ocr_error,
+        },
     }
 
     if db is not None and upload_id is not None:
@@ -129,6 +177,6 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
 
     logger.info(
         "Parsing PDF completed",
-        extra={"file_path": str(path), "page_count": page_count, "text_blocks": len(text_blocks)},
+        extra={"file_path": str(path), "page_count": page_count, "text_blocks": len(text_blocks), "ocr_status": ocr_status},
     )
     return result
