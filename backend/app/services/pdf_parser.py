@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Optional
 import fitz
 from sqlalchemy.orm import Session
 
-from app.db.models import PDFParse
+from app.db.models import OCRResult, PDFParse
+from app.services.ocr_engine import OCREngineError, OCREngineUnavailable, run_ocr_on_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +37,19 @@ def _extract_block_text(block: Dict[str, Any]) -> Optional[str]:
     return _safe_text("\n".join(processed_lines)) if processed_lines else None
 
 
+_IMAGE_DIR: Path = Path(__file__).resolve().parent.parent.parent / "output" / "ocr_images"
+
+
 def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None = None) -> Dict[str, Any]:
-    """Parse a PDF file and return structured drawing metadata and text blocks.
+    """Parse a PDF file and return structured drawing metadata, text blocks, and OCR results.
 
     Args:
         file_path: Path to the PDF file on disk.
-        db: Optional SQLAlchemy session for persistence of parsed entities.
+        db: Optional SQLAlchemy session for persistence of parsed information.
         upload_id: Optional upload record id to link parsed PDF information.
 
     Returns:
-        A dictionary containing parsed PDF metadata, text blocks, and counts.
+        A dictionary containing parsed PDF metadata, text blocks, and OCR statistics.
 
     Raises:
         PDFParseError: If the file is missing, unreadable, or not a valid PDF.
@@ -99,12 +103,42 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
             )
             total_text_count += len(text.split())
 
+    ocr_status = "not_run"
+    ocr_text_block_count = 0
+    ocr_pages: List[Dict[str, Any]] = []
+    ocr_error = None
+
+    if db is not None and upload_id is not None:
+        try:
+            ocr_result = run_ocr_on_pdf(str(path))
+            ocr_pages = ocr_result.get("ocr_pages", [])
+            ocr_text_block_count = ocr_result.get("text_block_count", 0)
+            ocr_status = "completed"
+
+            from app.services.ocr_engine import save_ocr_results
+
+            save_ocr_results(upload_id=upload_id, ocr_result=ocr_result, db=db, image_dir=_IMAGE_DIR)
+        except OCREngineUnavailable as exc:
+            logger.warning("OCR skipped: engine unavailable", extra={"upload_id": upload_id, "error": str(exc)})
+            ocr_status = "unavailable"
+            ocr_error = str(exc)
+        except OCREngineError as exc:
+            logger.error("OCR failed", extra={"upload_id": upload_id, "error": str(exc)})
+            ocr_status = "failed"
+            ocr_error = str(exc)
+
     result = {
         "page_count": page_count,
         "metadata": metadata,
         "text_blocks": text_blocks,
         "text_block_count": len(text_blocks),
         "total_text_count": total_text_count,
+        "ocr": {
+            "status": ocr_status,
+            "text_block_count": ocr_text_block_count,
+            "pages": ocr_pages,
+            "error": ocr_error,
+        },
     }
 
     if db is not None and upload_id is not None:
@@ -129,6 +163,6 @@ def parse_pdf(file_path: str, db: Session | None = None, upload_id: int | None =
 
     logger.info(
         "Parsing PDF completed",
-        extra={"file_path": str(path), "page_count": page_count, "text_blocks": len(text_blocks)},
+        extra={"file_path": str(path), "page_count": page_count, "text_blocks": len(text_blocks), "ocr_status": ocr_status},
     )
     return result

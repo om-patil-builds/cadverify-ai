@@ -41,6 +41,12 @@ class Upload(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    ocr_results = relationship(
+        "OCRResult",
+        back_populates="upload",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class DXFEntity(Base):
@@ -87,6 +93,20 @@ class ComparisonResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     upload = relationship("Upload", back_populates="comparison_results")
+
+
+class OCRResult(Base):
+    __tablename__ = "ocr_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    upload_id = Column(Integer, ForeignKey("uploads.id", ondelete="CASCADE"), nullable=False)
+    page_number = Column(Integer, nullable=False)
+    image_path = Column(String(500), nullable=True)
+    ocr_data = Column(JSON, nullable=False)
+    text_block_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    upload = relationship("Upload", back_populates="ocr_results")
 
 
 class Report(Base):

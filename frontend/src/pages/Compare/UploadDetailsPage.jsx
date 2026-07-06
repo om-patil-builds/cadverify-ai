@@ -485,6 +485,33 @@ const UploadDetailsPage = () => {
                           : 'No'}
                       </p>
                     </div>
+                    {pdfParseResult.ocr ? (
+                      <>
+                        <div>
+                          <span className="block text-sm text-slate-500">OCR Completion</span>
+                          <p className="text-white">
+                            {pdfParseResult.ocr.status === 'completed'
+                              ? 'Completed'
+                              : pdfParseResult.ocr.status === 'unavailable'
+                                ? 'Unavailable'
+                                : pdfParseResult.ocr.status === 'failed'
+                                  ? 'Failed'
+                                  : 'Not run'}
+                          </p>
+                          {pdfParseResult.ocr.status !== 'completed' && pdfParseResult.ocr.error ? (
+                            <p className="mt-1 text-xs text-rose-400">{pdfParseResult.ocr.error}</p>
+                          ) : null}
+                        </div>
+                        <div>
+                          <span className="block text-sm text-slate-500">Pages Processed</span>
+                          <p className="text-white">{pdfParseResult.ocr.pages?.length || 0}</p>
+                        </div>
+                        <div>
+                          <span className="block text-sm text-slate-500">Total OCR Text Blocks</span>
+                          <p className="text-white">{pdfParseResult.ocr.text_block_count || 0}</p>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
